@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"io/ioutil"
 )
 
 type ABC struct {
@@ -26,44 +27,84 @@ func (a *ABC) Init(key, secret, endpoint, region string) {
 }
 
 func (a *ABC) Get(bucket string, key string, x interface{}) error {
-	return get(a.s, bucket, key, x)
+	b, err := a.GetRaw(bucket, key)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(b, x)
 }
 
-func (a *ABC) Put(bucket string, key string, x interface{}) error {
-	return put(a.s, bucket, key, x)
-}
-
-func get(s *s3.S3, bucket string, key string, x interface{}) error {
+func (a *ABC) GetRaw(bucket, key string) ([]byte, error) {
 	input := s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	}
 
-	obj, err := s.GetObject(&input)
+	obj, err := a.s.GetObject(&input)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return json.NewDecoder(obj.Body).Decode(x)
+	return ioutil.ReadAll(obj.Body)
 }
 
-func put(s *s3.S3, bucket string, key string, x interface{}) error {
+func (a *ABC) Put(bucket string, key string, x interface{}) error {
 	tmp, err := json.Marshal(x)
 	if err != nil {
 		return err
 	}
 
+	return a.PutRaw(bucket, key, tmp)
+}
+
+func (a *ABC) PutRaw(bucket string, key string, b []byte) error {
 	object := s3.PutObjectInput{
 		Bucket: aws.String(bucket),        // The path to the directory you want to upload the object to, starting with your Space name.
 		Key:    aws.String(key),           // Object key, referenced whenever you want to access this file later.
-		Body:   bytes.NewReader(tmp),      // The object's contents.
+		Body:   bytes.NewReader(b),        // The object's contents.
 		ACL:    aws.String("public-read"), // Defines Access-control List (ACL) permissions, such as private or public.
 	}
 
-	_, err = s.PutObject(&object)
+	_, err := a.s.PutObject(&object)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (a *ABC) List(bucket string, prefix string) ([]string, error) {
+	params := s3.ListObjectsV2Input{
+		Bucket:  aws.String(bucket),
+		MaxKeys: aws.Int64(1000),
+	}
+	if prefix != "" {
+		params.Prefix = aws.String(prefix)
+	}
+
+	list := []*s3.ListObjectsV2Output{}
+	for {
+		output, err := a.s.ListObjectsV2(&params)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, output)
+
+		if len(output.Contents) == 0 {
+			break
+		} else {
+			params.StartAfter = output.Contents[len(output.Contents)-1].Key
+		}
+	}
+
+	str := []string{}
+	for _, x := range list {
+		for _, o := range x.Contents {
+			tmp := *o.Key
+			str = append(str, tmp)
+		}
+	}
+
+	return str, nil
 }
