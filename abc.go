@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"io/ioutil"
+	"runtime"
 )
 
 type ABC struct {
@@ -84,7 +85,7 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 	}
 
 	list := []*s3.ListObjectsV2Output{}
-	for {
+	for i := 0; ; i++ {
 		output, err := a.s.ListObjectsV2(&params)
 		if err != nil {
 			return nil, err
@@ -96,6 +97,13 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 		} else {
 			params.StartAfter = output.Contents[len(output.Contents)-1].Key
 		}
+
+		//WTF?
+		//Object listing includes XML unmarshaling (somewhere deep under the hood) — which is memory-intensive and can lead to overconsumption and sideeffects
+		if i > 10 {
+			i = 0
+			runtime.GC()
+		}
 	}
 
 	str := []string{}
@@ -105,6 +113,8 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 			str = append(str, tmp)
 		}
 	}
+
+	runtime.GC()
 
 	return str, nil
 }
