@@ -119,3 +119,42 @@ func TestList(t *testing.T) {
 		}
 	}
 }
+
+func TestExists(t *testing.T) {
+	var (
+		a ABC
+	)
+
+	a.Init(TEST_KEY, TEST_SECRET, TEST_ENDPOINT, TEST_REGION)
+	existent := "abc-test/test-existent.txt"
+	nonexistent := "abc-test/some-nonexistent-key.txt"
+
+	err := a.PutRaw(TEST_BUCKET, existent, []byte("Hello World"))
+	if err != nil {
+		t.Errorf("Put error: %v\n", err)
+		return
+	}
+
+	ex, err := a.Exists(TEST_BUCKET, existent)
+	if err != nil {
+		t.Errorf("Exists error: %v\n", err)
+		return
+	}
+
+	if !ex {
+		t.Errorf("Object should exist, but it doesn't")
+		return
+	}
+
+	ex, err = a.Exists(TEST_BUCKET, nonexistent)
+	if err != nil {
+		t.Errorf("Exists2 error: %v\n", err)
+		return
+	}
+
+	if ex {
+		t.Errorf("Object should NOT exist, but it does")
+		return
+	}
+
+}

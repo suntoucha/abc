@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"io/ioutil"
-	"runtime"
+	"strings"
 )
 
 type ABC struct {
@@ -85,7 +85,7 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 	}
 
 	list := []*s3.ListObjectsV2Output{}
-	for i := 0; ; i++ {
+	for {
 		output, err := a.s.ListObjectsV2(&params)
 		if err != nil {
 			return nil, err
@@ -97,13 +97,6 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 		} else {
 			params.StartAfter = output.Contents[len(output.Contents)-1].Key
 		}
-
-		//WTF?
-		//Object listing includes XML unmarshaling (somewhere deep under the hood) — which is memory-intensive and can lead to overconsumption and sideeffects
-		if i > 10 {
-			i = 0
-			runtime.GC()
-		}
 	}
 
 	str := []string{}
@@ -114,7 +107,22 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 		}
 	}
 
-	runtime.GC()
-
 	return str, nil
+}
+
+func (a *ABC) Exists(bucket, key string) (bool, error) {
+	params := s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+
+	_, err := a.s.HeadObject(&params)
+	if err != nil {
+		if strings.Contains(err.Error(), "NotFound") {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
