@@ -158,3 +158,53 @@ func TestExists(t *testing.T) {
 	}
 
 }
+
+func TestCursor(t *testing.T) {
+	var (
+		a           ABC
+		check, list []string
+	)
+
+	a.Init(TEST_KEY, TEST_SECRET, TEST_ENDPOINT, TEST_REGION)
+	prefix := "abc-test/cursor/"
+
+	for i := 0; i < 1100; i++ {
+		body := []byte("Hello Cursor " + strconv.Itoa(i))
+		key := prefix + "hello-cursor-" + strconv.Itoa(i) + ".txt"
+		check = append(check, key)
+		a.PutRaw(TEST_BUCKET, key, body)
+	}
+
+	cur := a.Cursor(TEST_BUCKET, prefix)
+	for {
+		key, exists, err := cur.Next()
+
+		if err != nil {
+			t.Errorf("Cursor.Next error: %v\n", err)
+			return
+		}
+
+		if !exists {
+			break
+		}
+
+		list = append(list, key)
+	}
+
+	if len(list) != len(check) {
+		t.Errorf("List result len [%v] does not match expected [%v]\n", len(list), len(check))
+		return
+	}
+
+	x := sort.StringSlice(list)
+	y := sort.StringSlice(check)
+
+	x.Sort()
+	y.Sort()
+
+	for i := 0; i < len(list); i++ {
+		if x[i] != y[i] {
+			t.Errorf("List result does not match at [%v]: %v | %v\n\n", i, x[i], y[i])
+		}
+	}
+}

@@ -126,3 +126,10 @@ func (a *ABC) Exists(bucket, key string) (bool, error) {
 
 	return true, nil
 }
+
+func (a *ABC) Cursor(bucket, prefix string) Cursor {
+	var cur Cursor
+	cur.Init(a.s, bucket, prefix)
+
+	return cur
+}
