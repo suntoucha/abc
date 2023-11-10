@@ -113,7 +113,7 @@ func TestList(t *testing.T) {
 	x.Sort()
 	y.Sort()
 
-	for i := 0; i < len(list); i++ {
+	for i := 0; i < len(x); i++ {
 		if x[i] != y[i] {
 			t.Errorf("List result does not match at [%v]: %v | %v\n\n", i, x[i], y[i])
 		}
@@ -202,9 +202,51 @@ func TestCursor(t *testing.T) {
 	x.Sort()
 	y.Sort()
 
-	for i := 0; i < len(list); i++ {
+	for i := 0; i < len(x); i++ {
 		if x[i] != y[i] {
 			t.Errorf("List result does not match at [%v]: %v | %v\n\n", i, x[i], y[i])
+		}
+	}
+}
+
+func TestArray(t *testing.T) {
+	var (
+		a              ABC
+		original, copy []string
+	)
+
+	a.Init(TEST_KEY, TEST_SECRET, TEST_ENDPOINT, TEST_REGION)
+	key := "abc-test/test-array.txt"
+	delim := "\n"
+
+	original = []string{"xx123", "bb", "hello-world", "a"}
+
+	err := a.PutArray(TEST_BUCKET, key, original, delim)
+	if err != nil {
+		t.Errorf("Put Array error: %v\n", err)
+		return
+	}
+
+	copy, err = a.GetArray(TEST_BUCKET, key, delim)
+	if err != nil {
+		t.Errorf("Get Array error: %v\n", err)
+		return
+	}
+
+	if len(original) != len(copy) {
+		t.Errorf("Copy len len [%v] does not match original [%v]\n", len(copy), len(original))
+		return
+	}
+
+	x := sort.StringSlice(copy)
+	y := sort.StringSlice(original)
+
+	x.Sort()
+	y.Sort()
+
+	for i := 0; i < len(x); i++ {
+		if x[i] != y[i] {
+			t.Errorf("Copy does not match original at [%v]: %v | %v\n\n", i, x[i], y[i])
 		}
 	}
 }

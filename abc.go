@@ -36,6 +36,39 @@ func (a *ABC) Get(bucket string, key string, x interface{}) error {
 	return json.Unmarshal(b, x)
 }
 
+func (a *ABC) Put(bucket string, key string, x interface{}) error {
+	tmp, err := json.Marshal(x)
+	if err != nil {
+		return err
+	}
+
+	return a.PutRaw(bucket, key, tmp)
+}
+
+func (a *ABC) GetArray(bucket, key, delim string) ([]string, error) {
+	raw, err := a.GetRaw(bucket, key)
+	if err != nil {
+		return nil, err
+	}
+
+	arr := strings.Split(string(raw), delim)
+
+	return arr, nil
+}
+
+func (a *ABC) PutArray(bucket string, key string, arr []string, delim string) error {
+	x := ""
+
+	for _, a := range arr {
+		if x != "" {
+			x += delim
+		}
+		x += a
+	}
+
+	return a.PutRaw(bucket, key, []byte(x))
+}
+
 func (a *ABC) GetRaw(bucket, key string) ([]byte, error) {
 	input := s3.GetObjectInput{
 		Bucket: aws.String(bucket),
@@ -48,15 +81,6 @@ func (a *ABC) GetRaw(bucket, key string) ([]byte, error) {
 	}
 
 	return ioutil.ReadAll(obj.Body)
-}
-
-func (a *ABC) Put(bucket string, key string, x interface{}) error {
-	tmp, err := json.Marshal(x)
-	if err != nil {
-		return err
-	}
-
-	return a.PutRaw(bucket, key, tmp)
 }
 
 func (a *ABC) PutRaw(bucket string, key string, b []byte) error {
