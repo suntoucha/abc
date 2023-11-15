@@ -57,14 +57,7 @@ func (a *ABC) GetArray(bucket, key, delim string) ([]string, error) {
 }
 
 func (a *ABC) PutArray(bucket string, key string, arr []string, delim string) error {
-	x := ""
-
-	for _, a := range arr {
-		if x != "" {
-			x += delim
-		}
-		x += a
-	}
+	x := strings.Join(arr, delim)
 
 	return a.PutRaw(bucket, key, []byte(x))
 }
