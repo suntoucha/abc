@@ -101,27 +101,23 @@ func (a *ABC) List(bucket string, prefix string) ([]string, error) {
 		params.Prefix = aws.String(prefix)
 	}
 
-	list := []*s3.ListObjectsV2Output{}
+	str := []string{}
 	for {
 		output, err := a.s.ListObjectsV2(&params)
 		if err != nil {
 			return nil, err
 		}
-		list = append(list, output)
 
 		if len(output.Contents) == 0 {
 			break
-		} else {
-			params.StartAfter = output.Contents[len(output.Contents)-1].Key
 		}
-	}
 
-	str := []string{}
-	for _, x := range list {
-		for _, o := range x.Contents {
+		for _, o := range output.Contents {
 			tmp := *o.Key
 			str = append(str, tmp)
 		}
+
+		params.StartAfter = output.Contents[len(output.Contents)-1].Key
 	}
 
 	return str, nil
